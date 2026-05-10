@@ -1,0 +1,27 @@
+{
+  "name": "sec-intel-app",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace @sec-intel-app/backend",
+    "dev:frontend": "npm run dev --workspace @sec-intel-app/frontend",
+    "build": "npm run build --workspace @sec-intel-app/shared && npm run build --workspace @sec-intel-app/backend && npm run build --workspace @sec-intel-app/frontend",
+    "lint": "npm run lint --workspace @sec-intel-app/shared && npm run lint --workspace @sec-intel-app/backend && npm run lint --workspace @sec-intel-app/frontend",
+    "test": "npm run test --workspace @sec-intel-app/backend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "@next/eslint-plugin-next": "^15.3.2",
+    "@types/node": "^22.15.17",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.26.0",
+    "globals": "^16.0.0",
+    "typescript": "^5.8.3"
+  }
+}
