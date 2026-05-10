@@ -8,14 +8,20 @@ export const EVENT_TYPES = [
   "CONVERTIBLE_DEBT",
   "WARRANT_ISSUANCE",
   "RESALE_REGISTRATION",
+  "INSIDER_BUY",
+  "INSIDER_SELL",
   "OTHER_FINANCING_EVENT",
   "NONE_FOUND"
 ] as const;
 
 export const CONFIDENCE_LEVELS = ["high", "medium", "low"] as const;
+export const SIGNAL_DIRECTIONS = ["positive", "negative", "neutral", "mixed"] as const;
+export const WARNING_LEVELS = ["high", "medium", "low"] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
 export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
+export type SignalDirection = (typeof SIGNAL_DIRECTIONS)[number];
+export type WarningLevel = (typeof WARNING_LEVELS)[number];
 
 export interface CompanyProfile {
   ticker: string;
@@ -48,6 +54,29 @@ export interface AnalysisEvent {
   confidence: ConfidenceLevel;
   sourceUrl: string;
   sourceSnippet: string;
+  signalDirection: SignalDirection;
+  warningLevel: WarningLevel;
+  shortTermImpact: string;
+  keyTerms: string;
+  sourceLabel: string;
+  shareCount: string;
+  pricePerShare: string;
+  insiderName: string;
+}
+
+export interface FinancialMetric {
+  label: string;
+  value: string;
+  asOf: string;
+}
+
+export interface FinancialSnapshot {
+  revenue: FinancialMetric;
+  netIncome: FinancialMetric;
+  cash: FinancialMetric;
+  totalDebt: FinancialMetric;
+  publicFloat: FinancialMetric;
+  sharesOutstanding: FinancialMetric;
 }
 
 export interface AnalyzeResponse {
@@ -57,5 +86,5 @@ export interface AnalyzeResponse {
   analyzedAt: string;
   events: AnalysisEvent[];
   recentFilings: FilingRecord[];
+  financialSnapshot: FinancialSnapshot;
 }
-

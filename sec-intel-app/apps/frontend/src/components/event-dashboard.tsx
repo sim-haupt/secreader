@@ -9,6 +9,7 @@ import type { AnalyzeResponse, CompanyProfile, EventType } from "../lib/types";
 import { CompanyHeader } from "./company-header";
 import { EventCard } from "./event-card";
 import { FilingsTable } from "./filings-table";
+import { FinancialHealth } from "./financial-health";
 import { SearchBar } from "./search-bar";
 import { formatDateTimeUtc, getEventLabel } from "../lib/format";
 
@@ -48,6 +49,8 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
       <SearchBar initialTicker={analysis.ticker} compact />
 
       <CompanyHeader company={company} />
+
+      <FinancialHealth financialSnapshot={analysis.financialSnapshot} />
 
       <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(12,51,46,0.09)] backdrop-blur md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">

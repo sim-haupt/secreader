@@ -40,6 +40,25 @@ interface FilingTextResponse {
   hash: string;
   sourceUrl: string;
   text: string;
+  rawBody: string;
+}
+
+export interface CompanyFactEntry {
+  end?: string;
+  filed?: string;
+  fy?: number;
+  fp?: string;
+  form?: string;
+  frame?: string;
+  val?: number | string;
+}
+
+export interface CompanyFactConcept {
+  units: Record<string, CompanyFactEntry[]>;
+}
+
+export interface CompanyFactsResponse {
+  facts: Record<string, Record<string, CompanyFactConcept>>;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -213,6 +232,12 @@ export class SecClient {
     return filings;
   }
 
+  async getCompanyFacts(cik: string): Promise<CompanyFactsResponse> {
+    return this.fetchJson<CompanyFactsResponse>(
+      `https://data.sec.gov/api/xbrl/companyfacts/CIK${formatCik(cik)}.json`
+    );
+  }
+
   async getFilingText(sourceUrl: string): Promise<FilingTextResponse> {
     // The SEC exposes filing bodies directly at archive URLs; we normalize HTML into plain text
     // so downstream extraction works on a predictable text representation.
@@ -238,6 +263,7 @@ export class SecClient {
 
     return {
       text,
+      rawBody,
       sourceUrl,
       hash: createHash("sha256").update(text).digest("hex")
     };

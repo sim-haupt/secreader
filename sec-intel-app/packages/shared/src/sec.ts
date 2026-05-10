@@ -6,6 +6,7 @@ export const DEFAULT_ANALYSIS_FORMS = [
   "8-K",
   "10-Q",
   "10-K",
+  "4",
   "S-1",
   "S-3",
   "424B5",

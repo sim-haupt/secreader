@@ -6,6 +6,8 @@ import {
   type AnalyzeResponse,
   type AnalysisEvent,
   type CompanyProfile,
+  type FinancialMetric,
+  type FinancialSnapshot,
   type FilingRecord
 } from "@sec-intel-app/shared";
 
@@ -15,7 +17,6 @@ import { AppError } from "./http.js";
 import { OpenAiExtractor } from "./openaiExtractor.js";
 import {
   findCompanyByTicker,
-  findEventsForFilings,
   findFilingDocument,
   findRecentFilings,
   replaceEventsForFiling,
@@ -25,7 +26,7 @@ import {
   type StoredCompany,
   type StoredFiling
 } from "./repository.js";
-import { SecClient } from "./secClient.js";
+import { SecClient, type CompanyFactEntry, type CompanyFactsResponse } from "./secClient.js";
 
 function hoursAgo(hours: number): number {
   return Date.now() - hours * 60 * 60 * 1000;
@@ -77,6 +78,150 @@ function isRelevantForAnalysis(filing: FilingRecord): boolean {
   return /offering|registration|prospectus|repurchase|warrant|notes/i.test(
     `${filing.form} ${filing.description}`
   );
+}
+
+function emptyMetric(label: string): FinancialMetric {
+  return {
+    label,
+    value: "not found",
+    asOf: "not found"
+  };
+}
+
+function formatNumericValue(value: number, kind: "currency" | "shares"): string {
+  if (!Number.isFinite(value)) {
+    return "not found";
+  }
+
+  if (kind === "currency") {
+    if (Math.abs(value) >= 1_000_000_000) {
+      return `$${(value / 1_000_000_000).toFixed(2)}B`;
+    }
+
+    if (Math.abs(value) >= 1_000_000) {
+      return `$${(value / 1_000_000).toFixed(2)}M`;
+    }
+
+    return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  }
+
+  if (Math.abs(value) >= 1_000_000_000) {
+    return `${(value / 1_000_000_000).toFixed(2)}B`;
+  }
+
+  if (Math.abs(value) >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(2)}M`;
+  }
+
+  return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
+function compareFactEntries(a: CompanyFactEntry, b: CompanyFactEntry): number {
+  const aDate = new Date(a.filed ?? a.end ?? 0).getTime();
+  const bDate = new Date(b.filed ?? b.end ?? 0).getTime();
+  return bDate - aDate;
+}
+
+function findLatestFactEntry(
+  facts: CompanyFactsResponse,
+  namespace: string,
+  conceptNames: string[],
+  preferredUnits: string[]
+): CompanyFactEntry | null {
+  const scopedFacts = facts.facts[namespace];
+  if (!scopedFacts) {
+    return null;
+  }
+
+  for (const conceptName of conceptNames) {
+    const concept = scopedFacts[conceptName];
+    if (!concept) {
+      continue;
+    }
+
+    for (const unit of preferredUnits) {
+      const entries = concept.units[unit];
+      if (!entries?.length) {
+        continue;
+      }
+
+      const filtered = entries
+        .filter((entry) => typeof entry.val === "number")
+        .filter((entry) => !entry.frame)
+        .filter((entry) => !entry.form || /^10-[QK]$|^10-K\/A$|^10-Q\/A$|^8-K$/i.test(entry.form))
+        .sort(compareFactEntries);
+
+      if (filtered[0]) {
+        return filtered[0];
+      }
+    }
+  }
+
+  return null;
+}
+
+function metricFromFact(
+  label: string,
+  entry: CompanyFactEntry | null,
+  kind: "currency" | "shares"
+): FinancialMetric {
+  if (!entry || typeof entry.val !== "number") {
+    return emptyMetric(label);
+  }
+
+  return {
+    label,
+    value: formatNumericValue(entry.val, kind),
+    asOf: entry.end ?? entry.filed ?? "not found"
+  };
+}
+
+function buildFinancialSnapshot(facts: CompanyFactsResponse | null): FinancialSnapshot {
+  if (!facts) {
+    return {
+      revenue: emptyMetric("Latest revenue"),
+      netIncome: emptyMetric("Latest net income"),
+      cash: emptyMetric("Cash"),
+      totalDebt: emptyMetric("Total debt"),
+      publicFloat: emptyMetric("Public float"),
+      sharesOutstanding: emptyMetric("Shares outstanding")
+    };
+  }
+
+  const revenueEntry = findLatestFactEntry(facts, "us-gaap", [
+    "Revenues",
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "SalesRevenueNet"
+  ], ["USD"]);
+  const netIncomeEntry = findLatestFactEntry(facts, "us-gaap", [
+    "NetIncomeLoss"
+  ], ["USD"]);
+  const cashEntry = findLatestFactEntry(facts, "us-gaap", [
+    "CashAndCashEquivalentsAtCarryingValue"
+  ], ["USD"]);
+  const debtEntry =
+    findLatestFactEntry(facts, "us-gaap", [
+      "LongTermDebtAndCapitalLeaseObligations",
+      "LongTermDebtNoncurrent",
+      "LongTermDebt",
+      "DebtInstrumentCarryingAmount"
+    ], ["USD"]) ??
+    findLatestFactEntry(facts, "us-gaap", ["Liabilities"], ["USD"]);
+  const publicFloatEntry = findLatestFactEntry(facts, "dei", [
+    "EntityPublicFloat"
+  ], ["USD"]);
+  const sharesOutstandingEntry = findLatestFactEntry(facts, "dei", [
+    "EntityCommonStockSharesOutstanding"
+  ], ["shares"]);
+
+  return {
+    revenue: metricFromFact("Latest revenue", revenueEntry, "currency"),
+    netIncome: metricFromFact("Latest net income", netIncomeEntry, "currency"),
+    cash: metricFromFact("Cash", cashEntry, "currency"),
+    totalDebt: metricFromFact("Total debt", debtEntry, "currency"),
+    publicFloat: metricFromFact("Public float", publicFloatEntry, "currency"),
+    sharesOutstanding: metricFromFact("Shares outstanding", sharesOutstandingEntry, "shares")
+  };
 }
 
 export class SecIntelService {
@@ -169,10 +314,10 @@ export class SecIntelService {
     const limit = input.limit ?? DEFAULT_FILING_LIMIT;
     const company = await this.resolveCompany(input.ticker, input.refresh ?? false);
     const recentFilingsResponse = await this.getFilings(company.ticker, limit, undefined, input.refresh ?? false);
+    const companyFacts = await this.secClient.getCompanyFacts(company.cik).catch(() => null);
     const relevantFilings = recentFilingsResponse.filings.filter(isRelevantForAnalysis);
     const storedFilings = await findRecentFilings(company.id, limit, undefined);
     const filingIndex = new Map(storedFilings.map((filing) => [filing.accessionNumber, filing]));
-    const existingEvents = await findEventsForFilings(storedFilings.map((filing) => filing.id));
     const allEvents: AnalysisEvent[] = [];
 
     for (const filing of relevantFilings) {
@@ -181,22 +326,10 @@ export class SecIntelService {
         continue;
       }
 
-      const cachedEvents = !input.refresh ? existingEvents.get(storedFiling.id) : undefined;
-      if (cachedEvents?.length) {
-        allEvents.push(
-          ...cachedEvents.map((event) => ({
-            ...event,
-            filingDate: filing.filingDate,
-            form: filing.form,
-            accessionNumber: filing.accessionNumber,
-            sourceUrl: filing.secUrl
-          }))
-        );
-        continue;
-      }
-
       const cachedDocument = !input.refresh ? await findFilingDocument(storedFiling.id) : null;
-      let filingText = cachedDocument;
+      let filingText: { rawText: string; rawBody?: string } | null = cachedDocument
+        ? { rawText: cachedDocument.rawText }
+        : null;
 
       if (!filingText) {
         const document = await this.secClient.getFilingText(filing.secUrl);
@@ -207,15 +340,12 @@ export class SecIntelService {
           rawTextHash: document.hash
         });
         filingText = {
-          filingId: storedFiling.id,
-          sourceUrl: document.sourceUrl,
           rawText: document.text,
-          rawTextHash: document.hash,
-          fetchedAt: new Date().toISOString()
+          rawBody: document.rawBody
         };
       }
 
-      const detectedEvents = detectEventsFromFiling(filing, filingText.rawText);
+      const detectedEvents = detectEventsFromFiling(filing, filingText.rawText, filingText.rawBody);
       const refinedEvents: AnalysisEvent[] = [];
 
       for (const event of detectedEvents) {
@@ -236,7 +366,8 @@ export class SecIntelService {
       cik: company.cik,
       analyzedAt: new Date().toISOString(),
       events: allEvents.length ? allEvents : [buildNoneFoundEvent(recentFilingsResponse.filings[0] ?? null)],
-      recentFilings: recentFilingsResponse.filings
+      recentFilings: recentFilingsResponse.filings,
+      financialSnapshot: buildFinancialSnapshot(companyFacts)
     };
   }
 }

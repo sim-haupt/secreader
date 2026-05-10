@@ -10,7 +10,8 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   CONVERTIBLE_DEBT: "Convertible Debt",
   WARRANT_ISSUANCE: "Warrant Issuance",
   RESALE_REGISTRATION: "Resale Registration",
+  INSIDER_BUY: "Insider Buy",
+  INSIDER_SELL: "Insider Sell",
   OTHER_FINANCING_EVENT: "Other Financing Event",
   NONE_FOUND: "No Relevant Events"
 };
-

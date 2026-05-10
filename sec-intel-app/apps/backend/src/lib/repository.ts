@@ -293,7 +293,15 @@ export async function findEventsForFilings(
       status: row.status ?? "not found",
       confidence: row.confidence,
       sourceUrl: "",
-      sourceSnippet: row.source_snippet
+      sourceSnippet: row.source_snippet,
+      signalDirection: "neutral",
+      warningLevel: "low",
+      shortTermImpact: row.summary,
+      keyTerms: "not found",
+      sourceLabel: "SEC filing",
+      shareCount: "not found",
+      pricePerShare: "not found",
+      insiderName: "not found"
     });
     eventsByFiling.set(filingId, bucket);
   }
@@ -329,4 +337,3 @@ export async function replaceEventsForFiling(
     }
   });
 }
-

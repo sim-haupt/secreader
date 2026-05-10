@@ -3,15 +3,14 @@ import { ExternalLink } from "lucide-react";
 import type { AnalysisEvent } from "../lib/types";
 
 import {
-  buildKeyTerms,
-  buildSimpleSummary,
-  buildSourceLabel,
+  buildEventHeadline,
+  compactEventTitle,
   confidenceTone,
   filingTone,
   formatDate,
-  getEventLabel,
-  getShortTermImpact,
-  titleCaseConfidence
+  titleCaseConfidence,
+  warningLabel,
+  warningTone
 } from "../lib/format";
 
 interface EventCardProps {
@@ -19,10 +18,7 @@ interface EventCardProps {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const impact = getShortTermImpact(event.eventType);
-  const simpleSummary = buildSimpleSummary(event.eventType, event.amount, event.securities);
-  const keyTerms = buildKeyTerms(event);
-  const sourceLabel = buildSourceLabel(event.form);
+  const headline = buildEventHeadline(event);
 
   return (
     <article className="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_18px_50px_rgba(12,51,46,0.09)] backdrop-blur">
@@ -30,13 +26,18 @@ export function EventCard({ event }: EventCardProps) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${impact.tone}`}>
-                {impact.label}
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${headline.tone}`}>
+                {headline.label}
               </span>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${filingTone(event.form)}`}
               >
                 {event.form}
+              </span>
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${warningTone(event.warningLevel)}`}
+              >
+                {warningLabel(event.warningLevel)}
               </span>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${confidenceTone(event.confidence)}`}
@@ -46,9 +47,9 @@ export function EventCard({ event }: EventCardProps) {
             </div>
 
             <h3 className="font-display text-2xl font-semibold tracking-tight text-slate-950">
-              {getEventLabel(event.eventType)}
+              {compactEventTitle(event.eventType)}
             </h3>
-            <p className="max-w-2xl text-sm leading-6 text-slate-600">{impact.explanation}</p>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">{headline.explanation}</p>
           </div>
 
           {event.sourceUrl ? (
@@ -72,33 +73,32 @@ export function EventCard({ event }: EventCardProps) {
             </p>
             <p>
               <span className="font-semibold text-slate-950">Detected event:</span>{" "}
-              {getEventLabel(event.eventType)}
+              {compactEventTitle(event.eventType)}
             </p>
             <p>
               <span className="font-semibold text-slate-950">Summary:</span>{" "}
-              {simpleSummary}
+              {event.summary}
             </p>
             <p>
               <span className="font-semibold text-slate-950">Key terms:</span>{" "}
-              {keyTerms}
+              {event.keyTerms}
             </p>
             <p>
               <span className="font-semibold text-slate-950">Source:</span>{" "}
-              {sourceLabel}
+              {event.sourceLabel}
             </p>
+            {event.insiderName !== "not found" ? (
+              <p>
+                <span className="font-semibold text-slate-950">Insider:</span>{" "}
+                {event.insiderName}
+              </p>
+            ) : null}
             <p>
               <span className="font-semibold text-slate-950">Confidence:</span>{" "}
               {titleCaseConfidence(event.confidence)}
             </p>
           </div>
         </div>
-
-        <blockquote className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 px-5 py-4 text-sm leading-7 text-emerald-950">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
-            Filing snippet
-          </p>
-          {event.sourceSnippet}
-        </blockquote>
       </div>
     </article>
   );
