@@ -31,6 +31,17 @@ export interface CompanyProfile {
   fiscalYearEnd: string | null;
 }
 
+export interface SplitEvent {
+  title: string;
+  splitType: "split" | "reverse_split";
+  ratio: string;
+  effectiveDate: string;
+  filingDate: string;
+  form: string;
+  sourceUrl: string;
+  sourceSnippet: string;
+}
+
 export interface FilingRecord {
   accessionNumber: string;
   filingDate: string;
@@ -87,6 +98,7 @@ export interface AnalyzeResponse {
   events: AnalysisEvent[];
   recentFilings: FilingRecord[];
   financialSnapshot: FinancialSnapshot;
+  splitHistory: SplitEvent[];
 }
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {

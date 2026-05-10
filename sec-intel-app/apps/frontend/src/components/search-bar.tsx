@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, LoaderCircle, Search } from "lucide-react";
 
 import { isValidTicker, normalizeTickerInput } from "../lib/sec";
 
@@ -16,17 +16,20 @@ export function SearchBar({ initialTicker = "", compact = false }: SearchBarProp
   const router = useRouter();
   const [ticker, setTicker] = useState(initialTicker);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = normalizeTickerInput(ticker);
 
     if (!isValidTicker(normalized)) {
+      setSubmitting(false);
       setError("Enter a valid U.S. stock ticker.");
       return;
     }
 
     setError("");
+    setSubmitting(true);
     router.push(`/ticker/${normalized}`);
   }
 
@@ -55,10 +58,11 @@ export function SearchBar({ initialTicker = "", compact = false }: SearchBarProp
 
           <button
             type="submit"
+            disabled={submitting}
             className="inline-flex items-center justify-center gap-2 rounded-[22px] bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700"
           >
-            Analyze ticker
-            <ArrowRight className="h-4 w-4" />
+            {submitting ? "Loading SEC data" : "Analyze ticker"}
+            {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
           </button>
         </div>
       </div>

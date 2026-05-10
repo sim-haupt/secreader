@@ -8,7 +8,8 @@ import {
   type CompanyProfile,
   type FinancialMetric,
   type FinancialSnapshot,
-  type FilingRecord
+  type FilingRecord,
+  type SplitEvent
 } from "@sec-intel-app/shared";
 
 import { TtlCache } from "./cache.js";
@@ -75,7 +76,7 @@ function isRelevantForAnalysis(filing: FilingRecord): boolean {
     return true;
   }
 
-  return /offering|registration|prospectus|repurchase|warrant|notes/i.test(
+  return /offering|registration|prospectus|repurchase|warrant|notes|13d|13g|beneficial ownership|insider/i.test(
     `${filing.form} ${filing.description}`
   );
 }
@@ -224,6 +225,65 @@ function buildFinancialSnapshot(facts: CompanyFactsResponse | null): FinancialSn
   };
 }
 
+function isRelevantForSplitHistory(filing: FilingRecord): boolean {
+  return /^(8-K|10-Q|10-K|20-F|DEF 14A|PRE 14A|S-1|S-3|F-1|F-3)$/i.test(filing.form);
+}
+
+function extractSplitHistory(
+  filing: FilingRecord,
+  rawText: string
+): SplitEvent[] {
+  const lower = rawText.toLowerCase();
+  const patterns = [
+    {
+      splitType: "reverse_split" as const,
+      label: "Reverse stock split",
+      phrases: ["reverse stock split", "reverse split", "1-for-"]
+    },
+    {
+      splitType: "split" as const,
+      label: "Stock split",
+      phrases: ["stock split", "forward stock split", "two-for-one split", "three-for-two split"]
+    }
+  ];
+
+  const found: SplitEvent[] = [];
+
+  for (const pattern of patterns) {
+    const matchedPhrase = pattern.phrases.find((phrase) => lower.includes(phrase));
+    if (!matchedPhrase) {
+      continue;
+    }
+
+    const index = lower.indexOf(matchedPhrase);
+    const snippet = rawText
+      .slice(Math.max(0, index - 220), Math.min(rawText.length, index + matchedPhrase.length + 260))
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const ratioMatch =
+      snippet.match(/\b(\d+(?:\.\d+)?\s*-\s*for\s*-\s*\d+(?:\.\d+)?)\b/i) ??
+      snippet.match(/\b(\d+(?:\.\d+)?\s*for\s*\d+(?:\.\d+)?)\b/i) ??
+      snippet.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten)-for-(one|two|three|four|five|six|seven|eight|nine|ten)\b/i);
+    const effectiveDateMatch =
+      snippet.match(/\beffective(?: as of| on)?\s+([A-Z][a-z]+ \d{1,2}, \d{4})/i) ??
+      snippet.match(/\bon\s+([A-Z][a-z]+ \d{1,2}, \d{4})/i);
+
+    found.push({
+      title: pattern.label,
+      splitType: pattern.splitType,
+      ratio: ratioMatch?.[1]?.replace(/\s*-\s*/g, "-") ?? "not found",
+      effectiveDate: effectiveDateMatch?.[1] ?? filing.reportDate ?? filing.filingDate,
+      filingDate: filing.filingDate,
+      form: filing.form,
+      sourceUrl: filing.secUrl,
+      sourceSnippet: snippet
+    });
+  }
+
+  return found;
+}
+
 export class SecIntelService {
   private readonly secClient = new SecClient();
   private readonly openAiExtractor = new OpenAiExtractor();
@@ -313,12 +373,31 @@ export class SecIntelService {
   }): Promise<AnalyzeResponse> {
     const limit = input.limit ?? DEFAULT_FILING_LIMIT;
     const company = await this.resolveCompany(input.ticker, input.refresh ?? false);
-    const recentFilingsResponse = await this.getFilings(company.ticker, limit, undefined, input.refresh ?? false);
+    const analysisForms = [...DEFAULT_ANALYSIS_FORMS];
+    const recentFilingsResponse = await this.getFilings(
+      company.ticker,
+      limit,
+      analysisForms,
+      input.refresh ?? false
+    );
     const companyFacts = await this.secClient.getCompanyFacts(company.cik).catch(() => null);
     const relevantFilings = recentFilingsResponse.filings.filter(isRelevantForAnalysis);
-    const storedFilings = await findRecentFilings(company.id, limit, undefined);
+    const splitCandidateResponse = await this.getFilings(
+      company.ticker,
+      80,
+      ["8-K", "10-Q", "10-K", "20-F", "DEF 14A", "PRE 14A", "S-1", "S-3", "F-1", "F-3"],
+      input.refresh ?? false
+    );
+    const storedFilings = await findRecentFilings(company.id, limit, analysisForms);
+    const splitStoredFilings = await findRecentFilings(
+      company.id,
+      80,
+      ["8-K", "10-Q", "10-K", "20-F", "DEF 14A", "PRE 14A", "S-1", "S-3", "F-1", "F-3"]
+    );
     const filingIndex = new Map(storedFilings.map((filing) => [filing.accessionNumber, filing]));
+    const splitFilingIndex = new Map(splitStoredFilings.map((filing) => [filing.accessionNumber, filing]));
     const allEvents: AnalysisEvent[] = [];
+    const splitHistory: SplitEvent[] = [];
 
     for (const filing of relevantFilings) {
       const storedFiling = filingIndex.get(filing.accessionNumber);
@@ -360,6 +439,40 @@ export class SecIntelService {
       allEvents.push(...refinedEvents);
     }
 
+    for (const filing of splitCandidateResponse.filings.filter(isRelevantForSplitHistory)) {
+      const storedFiling = splitFilingIndex.get(filing.accessionNumber);
+      if (!storedFiling) {
+        continue;
+      }
+
+      const cachedDocument = !input.refresh ? await findFilingDocument(storedFiling.id) : null;
+      let filingText: { rawText: string } | null = cachedDocument
+        ? { rawText: cachedDocument.rawText }
+        : null;
+
+      if (!filingText) {
+        const document = await this.secClient.getFilingText(filing.secUrl);
+        await upsertFilingDocument({
+          filingId: storedFiling.id,
+          sourceUrl: document.sourceUrl,
+          rawText: document.text,
+          rawTextHash: document.hash
+        });
+        filingText = { rawText: document.text };
+      }
+
+      splitHistory.push(...extractSplitHistory(filing, filingText.rawText));
+    }
+
+    const uniqueSplitHistory = splitHistory
+      .filter((event, index, all) => all.findIndex((candidate) =>
+        candidate.filingDate === event.filingDate &&
+        candidate.splitType === event.splitType &&
+        candidate.ratio === event.ratio
+      ) === index)
+      .sort((a, b) => new Date(b.filingDate).getTime() - new Date(a.filingDate).getTime())
+      .slice(0, 8);
+
     return {
       ticker: company.ticker,
       companyName: company.companyName,
@@ -367,7 +480,8 @@ export class SecIntelService {
       analyzedAt: new Date().toISOString(),
       events: allEvents.length ? allEvents : [buildNoneFoundEvent(recentFilingsResponse.filings[0] ?? null)],
       recentFilings: recentFilingsResponse.filings,
-      financialSnapshot: buildFinancialSnapshot(companyFacts)
+      financialSnapshot: buildFinancialSnapshot(companyFacts),
+      splitHistory: uniqueSplitHistory
     };
   }
 }

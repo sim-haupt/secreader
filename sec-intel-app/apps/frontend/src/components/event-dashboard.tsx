@@ -48,7 +48,7 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
     <div className="space-y-8">
       <SearchBar initialTicker={analysis.ticker} compact />
 
-      <CompanyHeader company={company} />
+      <CompanyHeader company={company} splitHistory={analysis.splitHistory} />
 
       <FinancialHealth financialSnapshot={analysis.financialSnapshot} />
 
