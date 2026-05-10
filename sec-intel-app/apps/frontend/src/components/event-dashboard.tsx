@@ -10,7 +10,7 @@ import { CompanyHeader } from "./company-header";
 import { EventCard } from "./event-card";
 import { FilingsTable } from "./filings-table";
 import { SearchBar } from "./search-bar";
-import { getEventLabel } from "../lib/format";
+import { formatDateTimeUtc, getEventLabel } from "../lib/format";
 
 interface EventDashboardProps {
   analysis: AnalyzeResponse;
@@ -58,7 +58,7 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
               Recent events from SEC filings
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Analyzed at {new Date(analysis.analyzedAt).toLocaleString()}.
+              Analyzed at {formatDateTimeUtc(analysis.analyzedAt)}.
             </p>
           </div>
 

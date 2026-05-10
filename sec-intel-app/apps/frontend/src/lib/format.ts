@@ -2,6 +2,16 @@ import { format, parseISO } from "date-fns";
 
 import { EVENT_TYPE_LABELS, type ConfidenceLevel, type EventType } from "./types";
 
+const UTC_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short"
+});
+
 export function formatDate(value: string): string {
   if (value === "not found") {
     return value;
@@ -9,6 +19,14 @@ export function formatDate(value: string): string {
 
   try {
     return format(parseISO(value), "MMM d, yyyy");
+  } catch {
+    return value;
+  }
+}
+
+export function formatDateTimeUtc(value: string): string {
+  try {
+    return UTC_DATE_TIME_FORMATTER.format(new Date(value));
   } catch {
     return value;
   }
