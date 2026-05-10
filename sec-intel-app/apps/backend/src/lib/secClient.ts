@@ -50,6 +50,15 @@ function normalizeWhitespace(input: string): string {
   return input.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function nullableText(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length ? trimmed : null;
+}
+
 class SecRequestScheduler {
   private queue = Promise.resolve();
   private lastRunAt = 0;
@@ -189,7 +198,7 @@ export class SecClient {
       filings.push({
         accessionNumber,
         filingDate,
-        reportDate: recent.reportDate[index] ?? null,
+        reportDate: nullableText(recent.reportDate[index]),
         form,
         primaryDocument,
         description: recent.primaryDocDescription?.[index] ?? "",
