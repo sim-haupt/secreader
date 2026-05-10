@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
-import type { AnalysisEvent } from "@sec-intel-app/shared";
+import type { AnalysisEvent } from "../lib/types";
 
 import { confidenceTone, filingTone, formatDate, getEventLabel } from "../lib/format";
 

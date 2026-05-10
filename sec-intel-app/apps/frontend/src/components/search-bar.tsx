@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Search } from "lucide-react";
 
-import { isValidTicker, normalizeTickerInput } from "@sec-intel-app/shared";
+import { isValidTicker, normalizeTickerInput } from "../lib/sec";
 
 interface SearchBarProps {
   initialTicker?: string;

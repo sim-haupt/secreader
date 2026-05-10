@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import type { AnalyzeResponse, CompanyProfile } from "@sec-intel-app/shared";
+import type { AnalyzeResponse, CompanyProfile } from "./types";
 
 function getApiBaseUrl(): string {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;

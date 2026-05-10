@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
-import type { FilingRecord } from "@sec-intel-app/shared";
+import type { FilingRecord } from "../lib/types";
 
 import { filingTone, formatDate } from "../lib/format";
 

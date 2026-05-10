@@ -1,4 +1,4 @@
-import { isValidTicker, normalizeTickerInput } from "@sec-intel-app/shared";
+import { isValidTicker, normalizeTickerInput } from "../../../lib/sec";
 
 import { EventDashboard } from "../../../components/event-dashboard";
 import { SearchBar } from "../../../components/search-bar";

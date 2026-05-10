@@ -1,4 +1,4 @@
-import type { CompanyProfile } from "@sec-intel-app/shared";
+import type { CompanyProfile } from "../lib/types";
 
 interface CompanyHeaderProps {
   company: CompanyProfile;
@@ -43,4 +43,3 @@ export function CompanyHeader({ company }: CompanyHeaderProps) {
     </section>
   );
 }
-

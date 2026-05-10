@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 
-import { EVENT_TYPE_LABELS, type ConfidenceLevel, type EventType } from "@sec-intel-app/shared";
+import { EVENT_TYPE_LABELS, type ConfidenceLevel, type EventType } from "./types";
 
 export function formatDate(value: string): string {
   if (value === "not found") {
@@ -44,4 +44,3 @@ export function filingTone(form: string): string {
 
   return "bg-slate-100 text-slate-700 ring-slate-200";
 }
-

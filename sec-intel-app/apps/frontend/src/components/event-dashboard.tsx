@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
-import type { AnalyzeResponse, CompanyProfile, EventType } from "@sec-intel-app/shared";
+import type { AnalyzeResponse, CompanyProfile, EventType } from "../lib/types";
 
 import { CompanyHeader } from "./company-header";
 import { EventCard } from "./event-card";
