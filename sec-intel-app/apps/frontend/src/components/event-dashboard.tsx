@@ -21,6 +21,7 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<"ALL" | EventType>("ALL");
   const [refreshing, setRefreshing] = useState(false);
+  const [showFilings, setShowFilings] = useState(false);
 
   const availableTypes = Array.from(
     new Set(
@@ -55,10 +56,10 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
               Capital-Markets Intelligence
             </p>
             <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-              Recent events from SEC filings
+              Short-term float and price signals
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Analyzed at {formatDateTimeUtc(analysis.analyzedAt)}.
+              Plain-English readout of recent SEC events that may affect float, dilution, financing risk, or near-term price action. Analyzed at {formatDateTimeUtc(analysis.analyzedAt)}.
             </p>
           </div>
 
@@ -107,13 +108,33 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
             No relevant recent events found
           </h3>
           <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-slate-600">
-            Not found in recent filings. Try refreshing, expanding the filing limit in the backend,
-            or reviewing the filings table below directly.
+            No obvious recent signal for dilution, offerings, buybacks, or financing events was found in the filings reviewed.
           </p>
         </section>
       )}
 
-      <FilingsTable filings={analysis.recentFilings} />
+      <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_20px_60px_rgba(12,51,46,0.09)] backdrop-blur md:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-950">
+              Raw filings
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Optional detail view if you want to inspect the underlying SEC filings yourself.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowFilings((current) => !current)}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            {showFilings ? "Hide filings" : "Show filings"}
+          </button>
+        </div>
+
+        {showFilings ? <div className="mt-6"><FilingsTable filings={analysis.recentFilings} /></div> : null}
+      </section>
     </div>
   );
 }

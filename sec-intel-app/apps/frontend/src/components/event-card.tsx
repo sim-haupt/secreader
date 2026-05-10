@@ -2,21 +2,36 @@ import { ExternalLink } from "lucide-react";
 
 import type { AnalysisEvent } from "../lib/types";
 
-import { confidenceTone, filingTone, formatDate, getEventLabel } from "../lib/format";
+import {
+  buildKeyTerms,
+  buildSimpleSummary,
+  buildSourceLabel,
+  confidenceTone,
+  filingTone,
+  formatDate,
+  getEventLabel,
+  getShortTermImpact,
+  titleCaseConfidence
+} from "../lib/format";
 
 interface EventCardProps {
   event: AnalysisEvent;
 }
 
 export function EventCard({ event }: EventCardProps) {
+  const impact = getShortTermImpact(event.eventType);
+  const simpleSummary = buildSimpleSummary(event.eventType, event.amount, event.securities);
+  const keyTerms = buildKeyTerms(event);
+  const sourceLabel = buildSourceLabel(event.form);
+
   return (
     <article className="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_18px_50px_rgba(12,51,46,0.09)] backdrop-blur">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-800 ring-1 ring-emerald-200">
-                {getEventLabel(event.eventType)}
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${impact.tone}`}>
+                {impact.label}
               </span>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1 ${filingTone(event.form)}`}
@@ -31,8 +46,9 @@ export function EventCard({ event }: EventCardProps) {
             </div>
 
             <h3 className="font-display text-2xl font-semibold tracking-tight text-slate-950">
-              {event.title}
+              {getEventLabel(event.eventType)}
             </h3>
+            <p className="max-w-2xl text-sm leading-6 text-slate-600">{impact.explanation}</p>
           </div>
 
           {event.sourceUrl ? (
@@ -48,28 +64,39 @@ export function EventCard({ event }: EventCardProps) {
           ) : null}
         </div>
 
-        <p className="text-base leading-7 text-slate-700">{event.summary}</p>
-
-        <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Filing Date</p>
-            <p className="mt-1 font-semibold text-slate-900">{formatDate(event.filingDate)}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Amount</p>
-            <p className="mt-1 font-semibold text-slate-900">{event.amount}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Securities</p>
-            <p className="mt-1 font-semibold text-slate-900">{event.securities}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Status</p>
-            <p className="mt-1 font-semibold text-slate-900">{event.status}</p>
+        <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5">
+          <div className="space-y-3 text-sm leading-7 text-slate-700">
+            <p>
+              <span className="font-semibold text-slate-950">Filing:</span>{" "}
+              {event.form} filed {formatDate(event.filingDate)}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-950">Detected event:</span>{" "}
+              {getEventLabel(event.eventType)}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-950">Summary:</span>{" "}
+              {simpleSummary}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-950">Key terms:</span>{" "}
+              {keyTerms}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-950">Source:</span>{" "}
+              {sourceLabel}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-950">Confidence:</span>{" "}
+              {titleCaseConfidence(event.confidence)}
+            </p>
           </div>
         </div>
 
         <blockquote className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 px-5 py-4 text-sm leading-7 text-emerald-950">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">
+            Filing snippet
+          </p>
           {event.sourceSnippet}
         </blockquote>
       </div>
