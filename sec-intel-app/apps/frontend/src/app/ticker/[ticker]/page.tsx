@@ -1,8 +1,8 @@
 import { isValidTicker, normalizeTickerInput } from "@sec-intel-app/shared";
 
-import { EventDashboard } from "@/components/event-dashboard";
-import { SearchBar } from "@/components/search-bar";
-import { analyzeTicker, getCompany } from "@/lib/api";
+import { EventDashboard } from "../../../components/event-dashboard";
+import { SearchBar } from "../../../components/search-bar";
+import { analyzeTicker, getCompany } from "../../../lib/api";
 
 interface TickerPageProps {
   params: Promise<{ ticker: string }>;

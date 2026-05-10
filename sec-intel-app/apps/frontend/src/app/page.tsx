@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Database, FileSearch, Radar } from "lucide-react";
 
-import { SearchBar } from "@/components/search-bar";
+import { SearchBar } from "../components/search-bar";
 
 const featureCards = [
   {

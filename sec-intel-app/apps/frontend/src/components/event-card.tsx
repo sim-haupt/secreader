@@ -2,7 +2,7 @@ import { ExternalLink } from "lucide-react";
 
 import type { AnalysisEvent } from "@sec-intel-app/shared";
 
-import { confidenceTone, filingTone, formatDate, getEventLabel } from "@/lib/format";
+import { confidenceTone, filingTone, formatDate, getEventLabel } from "../lib/format";
 
 interface EventCardProps {
   event: AnalysisEvent;
@@ -76,4 +76,3 @@ export function EventCard({ event }: EventCardProps) {
     </article>
   );
 }
-

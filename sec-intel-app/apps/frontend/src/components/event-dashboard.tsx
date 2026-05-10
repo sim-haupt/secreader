@@ -10,7 +10,7 @@ import { CompanyHeader } from "./company-header";
 import { EventCard } from "./event-card";
 import { FilingsTable } from "./filings-table";
 import { SearchBar } from "./search-bar";
-import { getEventLabel } from "@/lib/format";
+import { getEventLabel } from "../lib/format";
 
 interface EventDashboardProps {
   analysis: AnalyzeResponse;
@@ -117,4 +117,3 @@ export function EventDashboard({ analysis, company }: EventDashboardProps) {
     </div>
   );
 }
-

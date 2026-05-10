@@ -2,7 +2,7 @@ import { ExternalLink } from "lucide-react";
 
 import type { FilingRecord } from "@sec-intel-app/shared";
 
-import { filingTone, formatDate } from "@/lib/format";
+import { filingTone, formatDate } from "../lib/format";
 
 interface FilingsTableProps {
   filings: FilingRecord[];
@@ -105,4 +105,3 @@ export function FilingsTable({ filings }: FilingsTableProps) {
     </section>
   );
 }
-
